@@ -20,6 +20,7 @@ import analyticsRoutes
 from "./routes/analyticsRoutes.js";
 import notificationRoutes
 from "./models/routes/notificationRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
 
@@ -191,7 +192,6 @@ app.use(
   notificationRoutes
 );
 
-app.use("/api/analytics", analyticsRoutes);
 // ======================================================
 // SOCKET MIDDLEWARE
 // ======================================================
@@ -236,6 +236,8 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/users', userRoutes);
 
 app.use("/api/hospital", hospitalRoutes);
+
+app.use("/api/admin", adminRoutes);
 
 
 // ======================================================
