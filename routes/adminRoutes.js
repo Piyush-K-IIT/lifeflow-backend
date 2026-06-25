@@ -1,13 +1,28 @@
 import express from "express";
 
-import { getDashboardStats }
-from "../controllers/adminController.js";
+import {
+  getDashboardStats,
+  getAllUsers
+} from "../controllers/adminController.js";
 
 const router = express.Router();
+
+// ======================================================
+// ADMIN DASHBOARD
+// ======================================================
 
 router.get(
   "/dashboard",
   getDashboardStats
+);
+
+// ======================================================
+// USER MANAGEMENT
+// ======================================================
+
+router.get(
+  "/users",
+  getAllUsers
 );
 
 export default router;
