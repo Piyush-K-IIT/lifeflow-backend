@@ -77,17 +77,25 @@ export const getDashboardStats = async (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
+
+  
+
   try {
 
     const {
       search = "",
       role = "",
-      status = ""
+      status = "",
+      page = 1,
+      limit = 10,
     } = req.query;
 
     const query = {};
 
-    // Search
+    // ======================================================
+    // SEARCH
+    // ======================================================
+
     if (search) {
 
       query.$or = [
@@ -95,31 +103,31 @@ export const getAllUsers = async (req, res) => {
         {
           name: {
             $regex: search,
-            $options: "i"
-          }
+            $options: "i",
+          },
         },
 
         {
           email: {
             $regex: search,
-            $options: "i"
-          }
+            $options: "i",
+          },
         },
 
         {
           phone: {
             $regex: search,
-            $options: "i"
-          }
-        }
+            $options: "i",
+          },
+        },
 
       ];
 
     }
 
-
-
-    // Role Filter
+    // ======================================================
+    // ROLE FILTER
+    // ======================================================
 
     if (role) {
 
@@ -127,7 +135,9 @@ export const getAllUsers = async (req, res) => {
 
     }
 
-    // Status Filter
+    // ======================================================
+    // STATUS FILTER
+    // ======================================================
 
     if (status === "active") {
 
@@ -141,6 +151,20 @@ export const getAllUsers = async (req, res) => {
 
     }
 
+    // ======================================================
+    // PAGINATION
+    // ======================================================
+
+    const currentPage = parseInt(page);
+
+    const perPage = parseInt(limit);
+
+    const skip = (currentPage - 1) * perPage;
+
+    // ======================================================
+    // FETCH USERS
+    // ======================================================
+
     const users = await User.find(query)
 
       .select(
@@ -148,20 +172,52 @@ export const getAllUsers = async (req, res) => {
       )
 
       .sort({
-        createdAt: -1
-      });
+        createdAt: -1,
+      })
+
+      .skip(skip)
+
+      .limit(perPage);
+
+    // ======================================================
+    // TOTAL USERS
+    // ======================================================
+
+    const totalUsers = await User.countDocuments(query);
+
+    const totalPages = Math.ceil(totalUsers / perPage);
+
+    // ======================================================
+    // RESPONSE
+    // ======================================================
 
     res.status(200).json({
 
       success: true,
 
-      count: users.length,
+      users,
 
-      users
+      pagination: {
+
+        totalUsers,
+
+        totalPages,
+
+        currentPage,
+
+        perPage,
+
+        hasNextPage: currentPage < totalPages,
+
+        hasPrevPage: currentPage > 1,
+
+      },
 
     });
 
-  } catch (error) {
+  }
+
+  catch (error) {
 
     console.error(error);
 
@@ -177,33 +233,48 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const getUserById = async (req, res) => {
+
   try {
 
     const user = await User.findById(req.params.id)
       .select("-password");
 
     if (!user) {
+
       return res.status(404).json({
+
         success: false,
+
         message: "User not found"
+
       });
+
     }
 
     res.status(200).json({
+
       success: true,
+
       user
+
     });
 
-  } catch (error) {
+  }
+
+  catch (error) {
 
     console.error(error);
 
     res.status(500).json({
+
       success: false,
+
       message: "Unable to fetch user."
+
     });
 
   }
+
 };
 
 // ======================================================
@@ -279,4 +350,168 @@ const updatedUser = await User.findByIdAndUpdate(
 }
 
 };
+
+// ======================================================
+// BLOCK / UNBLOCK USER
+// ======================================================
+
+export const toggleUserStatus = async (req, res) => {
+
+  try {
+
+    const { isBlocked } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+
+      req.params.id,
+
+      {
+        isBlocked
+      },
+
+      {
+        returnDocument: "after"
+      }
+
+    ).select("-password");
+
+    if (!updatedUser) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "User not found"
+
+      });
+
+    }
+
+    res.status(200).json({
+
+      success: true,
+
+      message: isBlocked
+        ? "User blocked successfully."
+        : "User unblocked successfully.",
+
+      user: updatedUser
+
+    });
+
+  }
+
+  catch(error){
+
+    console.error(error);
+
+    res.status(500).json({
+
+      success:false,
+
+      message:error.message
+
+    });
+
+  }
+
+};
+
+
+// ======================================================
+// DELETE USER
+// ======================================================
+
+export const deleteUser = async (req, res) => {
+
+  try {
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "User not found."
+
+      });
+
+    }
+
+    // ======================================================
+    // PREVENT DELETING YOURSELF
+    // ======================================================
+
+    if (req.user && req.user.id === req.params.id) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message: "You cannot delete your own account."
+
+      });
+
+    }
+
+    // ======================================================
+    // PREVENT DELETING THE LAST ADMIN
+    // ======================================================
+
+    if (user.role === "admin") {
+
+     const adminCount = await User.countDocuments({
+
+        role: "admin"
+
+      });
+
+      if (adminCount === 1) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message: "The last administrator cannot be deleted."
+
+        });
+
+      }
+
+    }
+
+    // ======================================================
+    // DELETE USER
+    // ======================================================
+
+    await User.findByIdAndDelete(req.params.id);
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: "User deleted successfully."
+
+    });
+
+  }
+
+  catch (error) {
+
+    console.error("Delete User Error:", error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: "Unable to delete user."
+
+    });
+
+  }
+
+};
+
 

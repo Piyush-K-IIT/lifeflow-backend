@@ -203,30 +203,41 @@ router.post("/login", async (req, res) => {
 
     console.log("LOGIN EMAIL:", email);
 
-    const user =
-      await User.findOne({ email });
+const user = await User.findOne({ email });
 
-    console.log(
-      "FOUND USER:",
-      user
-    );
+console.log("FOUND USER:", user);
 
-    if (!user) {
+if (!user) {
 
-      console.log(
-        "USER NOT FOUND"
-      );
+  console.log("USER NOT FOUND");
 
-      return res.status(400).json({
+  return res.status(400).json({
+    success: false,
+    message: "Invalid Email or Password"
+  });
 
-        success: false,
+}
 
-        message:
-          "Invalid Email or Password"
+// ======================================================
+// CHECK IF USER IS BLOCKED
+// ======================================================
 
-      });
+if (user.isBlocked) {
 
-    }
+  console.log("BLOCKED USER LOGIN ATTEMPT");
+
+  return res.status(403).json({
+
+    success: false,
+
+    message:
+      "Your account has been blocked by the administrator. Please contact support."
+
+  });
+
+}
+
+console.log("User blocked status:", user.isBlocked);
 
     const isMatch =
       await bcrypt.compare(

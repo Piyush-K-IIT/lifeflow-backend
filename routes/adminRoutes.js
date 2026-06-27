@@ -4,8 +4,11 @@ import {
   getDashboardStats,
   getAllUsers,
   getUserById,
-  updateUser
+  updateUser,
+  toggleUserStatus,
+  deleteUser
 } from "../controllers/adminController.js";
+
 
 const router = express.Router();
 console.log("✅ adminRoutes.js loaded");
@@ -30,6 +33,16 @@ router.put(
     "/users/:id",
     updateUser
 );
+
+router.patch(
+    "/users/:id/status",
+    toggleUserStatus
+);
+
+router.delete(
+  "/users/:id",
+  deleteUser
+); 
 // ======================================================
 // USER MANAGEMENT
 // ======================================================
